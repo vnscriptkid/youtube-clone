@@ -55,4 +55,30 @@ Object {
 }
 `);
   });
+
+  test("do not create new user if user exists", async () => {
+    const user = await prisma.user.create({
+      data: {
+        email: "user@gmail.com",
+        username: "user",
+      },
+    });
+
+    const payload = {
+      idToken: "id-token-123",
+    };
+
+    jest.mock("google-auth-library");
+
+    const res = await request(server)
+      .post("/api/v1/auth/google-login")
+      .send(payload)
+      .expect(200);
+
+    const { id: userId } = jwt.verify(res.text, process.env.JWT_SECRET);
+    expect(userId).toBe(user.id);
+
+    const numOfUsers = await prisma.user.count();
+    expect(numOfUsers).toBe(1);
+  });
 });
