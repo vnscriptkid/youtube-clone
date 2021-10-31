@@ -48,3 +48,6 @@ npm run dev
 - [Google Developer Console](https://console.developers.google.com/)
 - [Prisma Docs](https://prisma.io)
 - [Cloudinary Documentation](https://cloudinary.com/documentation/)
+
+## Ref repos
+- https://github.com/ctrlplusb/prisma-pg-jest
