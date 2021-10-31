@@ -4,7 +4,9 @@ import jwt from "jsonwebtoken";
 import { protect } from "../middleware/authorization";
 import { OAuth2Client } from "google-auth-library";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+export const createOAuthClient = () =>
+  new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const prisma = new PrismaClient();
 
 function getAuthRoutes() {
@@ -20,10 +22,11 @@ function getAuthRoutes() {
 // All controllers/utility functions here
 async function googleLogin(req, res) {
   const { idToken } = req.body;
-  const ticket = await client.verifyIdToken({
+  const ticket = await createOAuthClient().verifyIdToken({
     idToken,
     audience: process.env.GOOGLE_CLIENT_ID,
   });
+
   const { name, picture, email } = ticket.getPayload();
 
   let user = await prisma.user.findUnique({
