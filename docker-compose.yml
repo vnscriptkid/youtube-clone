@@ -1,0 +1,13 @@
+version: "3"
+services:
+  db:
+    image: "postgres:11.6"
+    container_name: "postgres_11.6"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=youtube-test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data

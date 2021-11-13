@@ -18,4 +18,5 @@ module.exports = {
     require.resolve("jest-watch-typeahead/testname"),
   ],
   setupFilesAfterEnv: [require.resolve("./test/setup-env")],
+  testEnvironment: path.join(__dirname, "./prisma/prisma-test-environment.js"),
 };

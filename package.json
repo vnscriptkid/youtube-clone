@@ -15,6 +15,7 @@
     "generate": "prisma generate",
     "studio": "prisma studio",
     "postinstall": "cd client && npm install && npm run build",
+    "pretest": "docker-compose up -d",
     "test": "jest --watchAll --detectOpenHandles"
   },
   "cacheDirectories": [
@@ -33,7 +34,9 @@
     "google-auth-library": "^6.1.3",
     "jsonwebtoken": "^8.5.1",
     "loglevel": "^1.7.1",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "nanoid": "^3.1.30",
+    "pg": "^8.7.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.4",
