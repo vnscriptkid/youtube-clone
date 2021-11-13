@@ -24,7 +24,7 @@ class PrismaTestEnvironment extends NodeEnvironment {
     this.global.process.env.POSTGRES_URL = this.connectionString;
 
     // Run the migrations to ensure our schema has the required structure
-    await exec(`${prismaBinary} migrate up --experimental`);
+    // await exec(`${prismaBinary} migrate up --experimental`);
 
     return super.setup();
   }

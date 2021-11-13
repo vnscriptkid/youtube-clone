@@ -14,7 +14,7 @@ function getAuthRoutes() {
 
   router.post("/google-login", googleLogin);
   router.get("/me", protect, me);
-  router.get("/signout", signout);
+  router.get("/signout", protect, signout);
 
   return router;
 }

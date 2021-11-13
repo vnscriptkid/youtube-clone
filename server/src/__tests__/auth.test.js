@@ -132,3 +132,34 @@ Object {
 `);
   });
 });
+
+describe("GET /api/v1/signout", () => {
+  test("user can log out if he is already signed in", async () => {
+    const user = await prisma.user.create({
+      data: {
+        email: "user@gmail.com",
+        username: "user",
+      },
+    });
+
+    const tokenPayload = { id: user.id };
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE,
+    });
+
+    await request(server)
+      .get("/api/v1/auth/signout")
+      .set("Cookie", [`token=${token}`])
+      .expect(200);
+  });
+
+  test("user can not logout if he is not signed in yet", async () => {
+    const res = await request(server).get("/api/v1/auth/signout").expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+});
