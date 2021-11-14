@@ -2,7 +2,9 @@ import { startServer } from "../start";
 import request from "supertest";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
-import { user, buildUser } from "seed/users";
+import { buildUser } from "seed/users";
+import { buildVideo } from "../../../test/seed/videos";
+import { getJwtToken } from "../../../test/seed/users";
 
 let server;
 
@@ -86,27 +88,18 @@ Object {
 
 describe("GET /api/v1/auth/me", () => {
   test("returns currently logged in user", async () => {
-    const { user, token } = await buildUser();
+    const user = await buildUser();
 
     const res = await request(server)
       .get("/api/v1/auth/me")
-      .set("Cookie", [`token=${token}`])
+      .set("Cookie", [`token=${getJwtToken(user)}`])
       .expect(200);
 
     expect(user.id).toBe(res.body.user.id);
 
-    const { createdAt, id, ...otherFields } = res.body.user;
+    const { videos, createdAt, ...otherFields } = res.body.user;
 
-    expect(otherFields).toMatchInlineSnapshot(`
-Object {
-  "about": "",
-  "avatar": "http://picture.com/123",
-  "cover": "https://reedbarger.nyc3.digitaloceanspaces.com/default-cover-banner.png",
-  "email": "user@gmail.com",
-  "username": "user",
-  "videos": Array [],
-}
-`);
+    expect(user).toEqual(expect.objectContaining(otherFields));
   });
 
   test("returns 401 if no token in cookie", async () => {
@@ -130,6 +123,23 @@ Object {
   "message": "You need to be logged in to visit this route",
 }
 `);
+  });
+
+  test("it eager-loads videos of current user", async () => {
+    const user = await buildUser();
+
+    const myVideo = await buildVideo(user);
+    const someoneElseVideo = await buildVideo();
+
+    const res = await request(server)
+      .get("/api/v1/auth/me")
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const videos = res.body.user.videos;
+
+    expect(videos).toHaveLength(1);
+    expect(videos[0].id).toBe(myVideo.id);
   });
 });
 
