@@ -5,10 +5,10 @@ const { buildUser } = require("./users");
 
 const prisma = new PrismaClient();
 
-const buildVideo = async (user = null) => {
-  if (!user) {
-    user = await buildUser();
-  }
+const buildVideo = async (overrides = {}) => {
+  let { user, ...otherProps } = overrides;
+
+  if (!user) user = await buildUser();
 
   const video = await prisma.video.create({
     data: {
@@ -16,6 +16,7 @@ const buildVideo = async (user = null) => {
       description: faker.lorem.sentences(2),
       url: faker.internet.url(),
       thumbnail: faker.image.avatar(),
+      ...otherProps,
       user: {
         connect: {
           id: user.id,
