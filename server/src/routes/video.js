@@ -43,17 +43,18 @@ async function getRecommendedVideos(req, res) {
   let videos = await prisma.video.findMany({
     include: {
       user: true,
+      _count: {
+        select: {
+          views: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  if (!videos.length) {
-    return res.status(200).json({ videos });
-  }
-
-  videos = await getVideoViews(videos);
+  videos = videos.map((v) => ({ ...v, views: v._count.views }));
 
   res.status(200).json({ videos });
 }
