@@ -1,14 +1,12 @@
 import { startServer } from "../start";
 import request from "supertest";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../prisma";
 import jwt from "jsonwebtoken";
 import { buildUser } from "seed/users";
 import { buildVideo } from "../../../test/seed/videos";
 import { getJwtToken } from "../../../test/seed/users";
 
 let server;
-
-const prisma = new PrismaClient();
 
 beforeAll(async () => {
   server = await startServer();
@@ -128,7 +126,7 @@ Object {
   test("it eager-loads videos of current user", async () => {
     const user = await buildUser();
 
-    const myVideo = await buildVideo(user);
+    const myVideo = await buildVideo({ user });
     const someoneElseVideo = await buildVideo();
 
     const res = await request(server)
