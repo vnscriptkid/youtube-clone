@@ -1,9 +1,12 @@
-import { buildVideo } from "../../../test/seed/videos";
-import prisma from "../../prisma";
 import moment from "moment";
 import request from "supertest";
+import { PrismaClient } from "@prisma/client";
+
 import { startServer } from "../start";
 import { viewVideo } from "../../../test/seed/views";
+import { buildVideo } from "../../../test/seed/videos";
+
+const prisma = new PrismaClient();
 
 let server;
 
@@ -11,7 +14,10 @@ beforeAll(async () => {
   server = await startServer();
 });
 
-afterAll(() => server.close());
+afterAll(async () => {
+  await prisma.$disconnect();
+  await server.close();
+});
 
 beforeEach(async () => {
   await prisma.view.deleteMany();

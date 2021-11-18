@@ -1,10 +1,13 @@
-import { startServer } from "../start";
 import request from "supertest";
-import prisma from "../../prisma";
+import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+
 import { buildUser } from "seed/users";
+import { startServer } from "../start";
 import { buildVideo } from "../../../test/seed/videos";
 import { getJwtToken } from "../../../test/seed/users";
+
+const prisma = new PrismaClient();
 
 let server;
 
@@ -12,9 +15,13 @@ beforeAll(async () => {
   server = await startServer();
 });
 
-afterAll(() => server.close());
+afterAll(async () => {
+  await prisma.$disconnect();
+  await server.close();
+});
 
 beforeEach(async () => {
+  await prisma.view.deleteMany();
   await prisma.video.deleteMany();
   await prisma.user.deleteMany();
 });
