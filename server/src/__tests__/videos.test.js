@@ -78,8 +78,6 @@ describe("GET /api/v1/videos/trending", () => {
     // Assert
     expect(res.body.videos).toHaveLength(3);
 
-    console.log(res.body.videos);
-
     const [fiveViewsVid, fourViewsVid, oneViewVid] = res.body.videos;
 
     expect(fiveViewsVid.id).toBe(vid2.id);
@@ -90,5 +88,101 @@ describe("GET /api/v1/videos/trending", () => {
 
     expect(oneViewVid.id).toBe(vid1.id);
     expect(oneViewVid.views).toBe(1);
+  });
+});
+
+describe("GET /api/v1/videos/search", () => {
+  test("returns 400 if no query provided", async () => {
+    const video = await buildVideo({ title: "dog", description: "cat" });
+
+    const res = await request(server).get("/api/v1/videos/search").expect(400);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "Please enter a search query",
+}
+`);
+  });
+
+  test("returns empty if not found", async () => {
+    const video = await buildVideo({ title: "dog", description: "cat" });
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "fish" })
+      .expect(200);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "videos": Array [],
+}
+`);
+  });
+
+  test("returns video if title matches", async () => {
+    const vid1 = await buildVideo({ title: "fish", description: "fish" });
+    const vid2 = await buildVideo({ title: "dog", description: "cat" });
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "og" })
+      .expect(200);
+
+    expect(res.body.videos).toHaveLength(1);
+    expect(res.body.videos[0].id).toBe(vid2.id);
+  });
+
+  test("returns video if desc matches", async () => {
+    const vid1 = await buildVideo({ title: "dog", description: "cat" });
+    const vid2 = await buildVideo({ title: "fish", description: "fish" });
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "ca" })
+      .expect(200);
+
+    expect(res.body.videos).toHaveLength(1);
+    expect(res.body.videos[0].id).toBe(vid1.id);
+  });
+
+  test("returns video if title matches but capitalized ", async () => {
+    const vid1 = await buildVideo({ title: "doog", description: "cat" });
+    const vid2 = await buildVideo({ title: "fish", description: "fish" });
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "OO" })
+      .expect(200);
+
+    expect(res.body.videos).toHaveLength(1);
+    expect(res.body.videos[0].id).toBe(vid1.id);
+  });
+
+  test("returns video if desc matches but capitalized ", async () => {
+    const vid1 = await buildVideo({ title: "dog", description: "caat" });
+    const vid2 = await buildVideo({ title: "fish", description: "fish" });
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "AA" })
+      .expect(200);
+
+    expect(res.body.videos).toHaveLength(1);
+    expect(res.body.videos[0].id).toBe(vid1.id);
+  });
+
+  test("user and views are included", async () => {
+    const vid1 = await buildVideo({ title: "dog", description: "cat" });
+    const vid2 = await buildVideo({ title: "fish", description: "fish" });
+
+    await viewVideo(vid1, 2);
+
+    const res = await request(server)
+      .get("/api/v1/videos/search")
+      .query({ query: "dog" })
+      .expect(200);
+
+    expect(res.body.videos[0].user.id).toBe(vid1.userId);
+    expect(res.body.videos[0].views).toBe(2);
   });
 });
