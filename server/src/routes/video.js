@@ -63,18 +63,17 @@ async function getTrendingVideos(req, res) {
   let videos = await prisma.video.findMany({
     include: {
       user: true,
-    },
-    orderBy: {
-      createdAt: "desc",
+      _count: {
+        select: {
+          views: true,
+        },
+      },
     },
   });
 
-  if (!videos.length) {
-    return res.status(200).json({ videos });
-  }
+  videos = videos.map((v) => ({ ...v, views: v._count.views }));
 
-  videos = await getVideoViews(videos);
-  videos.sort((a, b) => b.views - a.views);
+  videos.sort((v1, v2) => v2.views - v1.views);
 
   res.status(200).json({ videos });
 }
