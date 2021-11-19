@@ -22,6 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.view.deleteMany();
+  await prisma.comment.deleteMany();
   await prisma.video.deleteMany();
   await prisma.user.deleteMany();
 });

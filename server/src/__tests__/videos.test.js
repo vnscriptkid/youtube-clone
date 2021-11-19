@@ -22,6 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.view.deleteMany();
+  await prisma.comment.deleteMany();
   await prisma.video.deleteMany();
   await prisma.user.deleteMany();
 });
@@ -221,5 +222,54 @@ Object {
     expect(videosInDb[0]).toMatchObject(postData);
 
     expect(res.body.video.userId).toEqual(user.id);
+  });
+});
+
+describe("POST /api/v1/videos/:videoId/comments (Add comment for video)", () => {
+  test("only authed user can access route", async () => {
+    const res = await request(server)
+      .post("/api/v1/videos/video-id/comments")
+      .expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+
+  test("returns 404 if video id does not exist", async () => {
+    const user = await buildUser();
+
+    const res = await request(server)
+      .post("/api/v1/videos/video-id/comments")
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .send({ text: "abc" })
+      .expect(404);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "No video found with id: \\"video-id\\"",
+}
+`);
+  });
+
+  test("add comment for video successfully", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .post(`/api/v1/videos/${video.id}/comments`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .send({ text: "Example text" })
+      .expect(200);
+
+    const commentsInDb = await prisma.comment.findMany();
+    expect(commentsInDb).toHaveLength(1);
+
+    const commentInRes = res.body.comment;
+    expect(commentInRes.userId).toEqual(user.id);
+    expect(commentInRes.videoId).toEqual(video.id);
+    expect(commentInRes.id).toEqual(commentsInDb[0].id);
   });
 });
