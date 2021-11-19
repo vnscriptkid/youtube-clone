@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { startServer } from "../start";
 import { viewVideo } from "../../../test/seed/views";
 import { buildVideo } from "../../../test/seed/videos";
+import { buildUser, getJwtToken } from "../../../test/seed/users";
 
 const prisma = new PrismaClient();
 
@@ -184,5 +185,39 @@ Object {
 
     expect(res.body.videos[0].user.id).toBe(vid1.userId);
     expect(res.body.videos[0].views).toBe(2);
+  });
+});
+
+describe("POST /api/v1/videos (Create new video)", () => {
+  test("only authed user can access route", async () => {
+    const res = await request(server).post("/api/v1/videos").expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+
+  test("can create new video", async () => {
+    const user = await buildUser();
+
+    const postData = {
+      title: "Example title",
+      description: "Example description",
+      url: "http://example.com/url",
+      thumbnail: "http://example.com/url/avatar",
+    };
+
+    const res = await request(server)
+      .post("/api/v1/videos")
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .send(postData)
+      .expect(200);
+
+    expect(res.body.video).toMatchObject(postData);
+    const videosInDb = await prisma.video.findMany();
+    expect(videosInDb).toHaveLength(1);
+    expect(videosInDb[0]).toMatchObject(postData);
   });
 });

@@ -5,6 +5,13 @@ const { buildUser } = require("./users");
 
 const prisma = new PrismaClient();
 
+const fakeVideo = () => ({
+  title: faker.datatype.string(5),
+  description: faker.lorem.sentences(2),
+  url: faker.internet.url(),
+  thumbnail: faker.image.avatar(),
+});
+
 const buildVideo = async (overrides = {}) => {
   let { user, ...otherProps } = overrides;
 
@@ -12,10 +19,7 @@ const buildVideo = async (overrides = {}) => {
 
   const video = await prisma.video.create({
     data: {
-      title: faker.datatype.string(5),
-      description: faker.lorem.sentences(2),
-      url: faker.internet.url(),
-      thumbnail: faker.image.avatar(),
+      ...fakeVideo(),
       ...otherProps,
       user: {
         connect: {
@@ -28,4 +32,4 @@ const buildVideo = async (overrides = {}) => {
   return video;
 };
 
-module.exports = { buildVideo };
+module.exports = { buildVideo, fakeVideo };
