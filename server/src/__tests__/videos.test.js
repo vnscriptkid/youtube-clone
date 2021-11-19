@@ -275,7 +275,9 @@ Object {
   });
 });
 
+/* -------------- */
 /* Delete comment */
+/* -------------- */
 describe("DELETE /api/v1/videos/:videoId/comments/:commentId (Delete video's comment)", () => {
   test("only authed user can access route", async () => {
     const res = await request(server)
@@ -314,5 +316,49 @@ Object {
     const commentsInDb = await prisma.comment.findMany();
     expect(commentsInDb).toHaveLength(1);
     expect(commentsInDb[0].id).toEqual(someoneComment.id);
+  });
+});
+
+/* -------------- */
+/* VIEW VIDEO     */
+/* -------------- */
+describe("GET /api/v1/videos/:videoId/view (View a video)", () => {
+  test("authed user can view a video", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/view`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const viewsInDb = await prisma.view.findMany();
+    expect(viewsInDb).toHaveLength(1);
+    expect(viewsInDb[0].userId).toEqual(user.id);
+    expect(viewsInDb[0].videoId).toEqual(video.id);
+  });
+
+  test("guest user can view a video", async () => {
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/view`)
+      .expect(200);
+
+    const viewsInDb = await prisma.view.findMany();
+    expect(viewsInDb).toHaveLength(1);
+    expect(viewsInDb[0].userId).toEqual(null);
+    expect(viewsInDb[0].videoId).toEqual(video.id);
+  });
+
+  test("returns 404 if videoId does not exist", async () => {
+    const nonExistentVideoId = "999999";
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${nonExistentVideoId}/view`)
+      .expect(404);
+
+    const numOfViews = await prisma.view.count();
+    expect(numOfViews).toEqual(0);
   });
 });
