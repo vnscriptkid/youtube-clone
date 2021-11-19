@@ -219,5 +219,7 @@ Object {
     const videosInDb = await prisma.video.findMany();
     expect(videosInDb).toHaveLength(1);
     expect(videosInDb[0]).toMatchObject(postData);
+
+    expect(res.body.video.userId).toEqual(user.id);
   });
 });
