@@ -6,6 +6,7 @@ import { startServer } from "../start";
 import { viewVideo } from "../../../test/seed/views";
 import { buildVideo } from "../../../test/seed/videos";
 import { buildUser, getJwtToken } from "../../../test/seed/users";
+import { buildComment } from "../../../test/seed/comments";
 
 const prisma = new PrismaClient();
 
@@ -271,5 +272,47 @@ Object {
     expect(commentInRes.userId).toEqual(user.id);
     expect(commentInRes.videoId).toEqual(video.id);
     expect(commentInRes.id).toEqual(commentsInDb[0].id);
+  });
+});
+
+/* Delete comment */
+describe("DELETE /api/v1/videos/:videoId/comments/:commentId (Delete video's comment)", () => {
+  test("only authed user can access route", async () => {
+    const res = await request(server)
+      .delete("/api/v1/videos/video-id/comments/comment-id")
+      .expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+
+  test("returns 401 if user is not author of comment", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+    const someoneComment = await buildComment();
+
+    const res = await request(server)
+      .delete(`/api/v1/videos/${video.id}/comments/${someoneComment.id}`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(401);
+  });
+
+  test("returns 200 if delete successfully", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+    const someoneComment = await buildComment();
+    const myComment = await buildComment({ user });
+
+    const res = await request(server)
+      .delete(`/api/v1/videos/${video.id}/comments/${myComment.id}`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const commentsInDb = await prisma.comment.findMany();
+    expect(commentsInDb).toHaveLength(1);
+    expect(commentsInDb[0].id).toEqual(someoneComment.id);
   });
 });
