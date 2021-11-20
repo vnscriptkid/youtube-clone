@@ -7,6 +7,7 @@ import { viewVideo } from "../../../test/seed/views";
 import { buildVideo } from "../../../test/seed/videos";
 import { buildUser, getJwtToken } from "../../../test/seed/users";
 import { buildComment } from "../../../test/seed/comments";
+import { dislikeVideo, likeVideo } from "../../../test/seed/likes";
 
 const prisma = new PrismaClient();
 
@@ -23,11 +24,15 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.view.deleteMany();
+  await prisma.videoLike.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.video.deleteMany();
   await prisma.user.deleteMany();
 });
 
+/**************************/
+/* GET RECOMMENDED VIDEOS */
+/**************************/
 describe("GET /api/v1/videos", () => {
   test("recommended videos are ordered latest first ", async () => {
     // Arrange
@@ -62,6 +67,9 @@ describe("GET /api/v1/videos", () => {
   });
 });
 
+/***********************/
+/* GET TRENDING VIDEOS */
+/***********************/
 describe("GET /api/v1/videos/trending", () => {
   test("videos are ordered by number of views in ascending order", async () => {
     // Arrange
@@ -94,6 +102,9 @@ describe("GET /api/v1/videos/trending", () => {
   });
 });
 
+/***********************/
+/* SEARCH VIDEOS       */
+/***********************/
 describe("GET /api/v1/videos/search", () => {
   test("returns 400 if no query provided", async () => {
     const video = await buildVideo({ title: "dog", description: "cat" });
@@ -190,6 +201,9 @@ Object {
   });
 });
 
+/***********************/
+/* CREATE NEW VIDEO    */
+/***********************/
 describe("POST /api/v1/videos (Create new video)", () => {
   test("only authed user can access route", async () => {
     const res = await request(server).post("/api/v1/videos").expect(401);
@@ -226,6 +240,9 @@ Object {
   });
 });
 
+/***********************/
+/* COMMENT ON VIDEO    */
+/***********************/
 describe("POST /api/v1/videos/:videoId/comments (Add comment for video)", () => {
   test("only authed user can access route", async () => {
     const res = await request(server)
@@ -276,7 +293,7 @@ Object {
 });
 
 /* -------------- */
-/* Delete comment */
+/* DELETE COMMENT */
 /* -------------- */
 describe("DELETE /api/v1/videos/:videoId/comments/:commentId (Delete video's comment)", () => {
   test("only authed user can access route", async () => {
@@ -316,6 +333,193 @@ Object {
     const commentsInDb = await prisma.comment.findMany();
     expect(commentsInDb).toHaveLength(1);
     expect(commentsInDb[0].id).toEqual(someoneComment.id);
+  });
+});
+
+/* -------------- */
+/* LIKE VIDEO     */
+/* -------------- */
+describe("likeVideo() and dislikeVideo() method", () => {
+  test("creates a like linked to user and video", async () => {
+    const video = await buildVideo();
+    const user = await buildUser();
+
+    await likeVideo({ user, video });
+
+    const likesInDb = await prisma.videoLike.findMany();
+
+    expect(likesInDb).toHaveLength(1);
+    expect(likesInDb[0].videoId).toEqual(video.id);
+    expect(likesInDb[0].userId).toEqual(user.id);
+    expect(likesInDb[0].like).toEqual(1);
+  });
+
+  test("creates a dislike linked to user and video", async () => {
+    const video = await buildVideo();
+    const user = await buildUser();
+
+    await dislikeVideo({ user, video });
+
+    const dislikesInDb = await prisma.videoLike.findMany();
+
+    expect(dislikesInDb).toHaveLength(1);
+    expect(dislikesInDb[0].videoId).toEqual(video.id);
+    expect(dislikesInDb[0].userId).toEqual(user.id);
+    expect(dislikesInDb[0].like).toEqual(-1);
+  });
+});
+
+describe("GET /api/v1/videos/:videoId/like (Like a video)", () => {
+  test("returns 401 if user is unauthed", async () => {
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/like`)
+      .expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+
+  test("returns 404 if videoId does not exist", async () => {
+    const nonExistentVideoId = "999999";
+    const user = await buildUser();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${nonExistentVideoId}/like`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(404);
+
+    const numOfLikes = await prisma.videoLike.count();
+    expect(numOfLikes).toEqual(0);
+  });
+
+  test("it deletes like if currently liked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    await likeVideo({ user, video });
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/like`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(0);
+  });
+
+  test("it creates a new like if not currently liked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/like`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(1);
+    expect(likesInDb[0].userId).toEqual(user.id);
+    expect(likesInDb[0].videoId).toEqual(video.id);
+    expect(likesInDb[0].like).toEqual(1);
+  });
+
+  test("it toggles if currently disliked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+    dislikeVideo({ user, video });
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/like`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(1);
+    expect(likesInDb[0].userId).toEqual(user.id);
+    expect(likesInDb[0].videoId).toEqual(video.id);
+    expect(likesInDb[0].like).toEqual(1);
+  });
+});
+
+describe("GET /api/v1/videos/:videoId/dislike (Dislike a video)", () => {
+  test("returns 401 if user is unauthed", async () => {
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/dislike`)
+      .expect(401);
+
+    expect(res.body).toMatchInlineSnapshot(`
+Object {
+  "message": "You need to be logged in to visit this route",
+}
+`);
+  });
+
+  test("returns 404 if videoId does not exist", async () => {
+    const nonExistentVideoId = "999999";
+    const user = await buildUser();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${nonExistentVideoId}/dislike`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(404);
+
+    const numOfLikes = await prisma.videoLike.count();
+    expect(numOfLikes).toEqual(0);
+  });
+
+  test("it deletes dislike if currently disliked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    await dislikeVideo({ user, video });
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/dislike`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(0);
+  });
+
+  test("it creates a new dislike if not currently disliked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/dislike`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(1);
+    expect(likesInDb[0].userId).toEqual(user.id);
+    expect(likesInDb[0].videoId).toEqual(video.id);
+    expect(likesInDb[0].like).toEqual(-1);
+  });
+
+  test("it toggles if currently liked", async () => {
+    const user = await buildUser();
+    const video = await buildVideo();
+    likeVideo({ user, video });
+
+    const res = await request(server)
+      .get(`/api/v1/videos/${video.id}/dislike`)
+      .set("Cookie", [`token=${getJwtToken(user)}`])
+      .expect(200);
+
+    const likesInDb = await prisma.videoLike.findMany();
+    expect(likesInDb).toHaveLength(1);
+    expect(likesInDb[0].userId).toEqual(user.id);
+    expect(likesInDb[0].videoId).toEqual(video.id);
+    expect(likesInDb[0].like).toEqual(-1);
   });
 });
 
