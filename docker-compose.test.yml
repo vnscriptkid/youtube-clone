@@ -2,10 +2,10 @@ version: "3"
 services:
   db:
     image: "postgres:11.6"
-    container_name: "postgres-youtube"
+    container_name: "postgres-youtube-test"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
-      - POSTGRES_DB=youtube
+      - POSTGRES_DB=youtube-test
     ports:
-      - "5432:5432"
+      - "5433:5432"

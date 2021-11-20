@@ -13,10 +13,6 @@ module.exports = {
   coverageDirectory: path.join(__dirname, "./coverage/collective"),
   collectCoverageFrom: ["**/src/**/*.js"],
   coveragePathIgnorePatterns: [".*/__tests__/.*"],
-  watchPlugins: [
-    require.resolve("jest-watch-typeahead/filename"),
-    require.resolve("jest-watch-typeahead/testname"),
-  ],
   setupFilesAfterEnv: [require.resolve("./test/setup-env")],
   testEnvironment: path.join(__dirname, "./prisma/prisma-test-environment.js"),
 };
