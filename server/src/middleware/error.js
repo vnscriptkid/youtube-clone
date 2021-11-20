@@ -5,7 +5,7 @@ function errorMiddleware(error, req, res, next) {
   if (res.headersSent) {
     next(error);
   } else {
-    logger.error(error);
+    if (process.env.NODE_ENV !== "test") logger.error(error);
     res.status(error.statusCode || 500);
     res.json({
       message: error.message,
