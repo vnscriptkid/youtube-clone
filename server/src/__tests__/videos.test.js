@@ -2,7 +2,6 @@ import moment from "moment";
 import request from "supertest";
 import { PrismaClient } from "@prisma/client";
 
-import { startServer } from "../start";
 import { viewVideo } from "../../../test/seed/views";
 import { buildVideo } from "../../../test/seed/videos";
 import { buildUser, getJwtToken } from "../../../test/seed/users";
@@ -10,25 +9,6 @@ import { buildComment } from "../../../test/seed/comments";
 import { dislikeVideo, likeVideo } from "../../../test/seed/likes";
 
 const prisma = new PrismaClient();
-
-let server;
-
-beforeAll(async () => {
-  server = await startServer();
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
-  await server.close();
-});
-
-beforeEach(async () => {
-  await prisma.view.deleteMany();
-  await prisma.videoLike.deleteMany();
-  await prisma.comment.deleteMany();
-  await prisma.video.deleteMany();
-  await prisma.user.deleteMany();
-});
 
 /**************************/
 /* GET RECOMMENDED VIDEOS */
